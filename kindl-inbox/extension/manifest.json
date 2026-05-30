@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Kindl Inbox",
+  "version": "0.1.0",
+  "description": "AI email analyser and reply generator for Gmail, powered by UseKindl",
+  "permissions": [
+    "storage",
+    "identity",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://*.supabase.co/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "Kindl Inbox"
+  },
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["src/content/index.ts"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["https://mail.google.com/*"]
+    }
+  ]
+}
