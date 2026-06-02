@@ -3,6 +3,11 @@
   "name": "Kindl Inbox",
   "version": "0.1.0",
   "description": "AI email analyser and reply generator for Gmail, powered by UseKindl",
+  "icons": {
+    "16": "public/icons/icon16.png",
+    "48": "public/icons/icon48.png",
+    "128": "public/icons/icon128.png"
+  },
   "permissions": [
     "storage",
     "identity",
@@ -10,11 +15,17 @@
   ],
   "host_permissions": [
     "https://mail.google.com/*",
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "https://api.usekindl.xyz/*"
   ],
   "action": {
     "default_popup": "src/popup/index.html",
-    "default_title": "Kindl Inbox"
+    "default_title": "Kindl Inbox",
+    "default_icon": {
+      "16": "public/icons/icon16.png",
+      "48": "public/icons/icon48.png",
+      "128": "public/icons/icon128.png"
+    }
   },
   "background": {
     "service_worker": "src/background/index.ts",

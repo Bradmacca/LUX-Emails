@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '../lib/supabase'
 import type { ExtMessage, ExtResponse } from '../lib/messaging'
+import { FREE_DAILY_LIMIT } from 'shared'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string
 const SESSION_KEY = 'kindl_session'
@@ -57,7 +58,7 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       }
       if (res.status === 429) {
         const body = await res.json().catch(() => ({}))
-        return { type: 'RATE_LIMITED', count: body.count ?? 10, limit: body.limit ?? 10 }
+        return { type: 'RATE_LIMITED', count: body.count ?? FREE_DAILY_LIMIT, limit: body.limit ?? FREE_DAILY_LIMIT }
       }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -65,6 +66,20 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       }
 
       const data = await res.json()
+
+      // Refresh cached usage so the popup shows an up-to-date count
+      try {
+        const usageRes = await fetch(`${API_BASE}/api/usage`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (usageRes.ok) {
+          const usage = await usageRes.json()
+          await chrome.storage.local.set({ kindl_usage: usage })
+        }
+      } catch {
+        // Non-fatal — popup will refetch on next open
+      }
+
       return { type: 'ANALYSE_RESULT', data }
     }
 
@@ -79,6 +94,7 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
         })
         if (!res.ok) return { type: 'AUTH_REQUIRED' }
         const data = await res.json()
+        await chrome.storage.local.set({ kindl_usage: data })
         return { type: 'USAGE_RESULT', data }
       } catch {
         return { type: 'AUTH_REQUIRED' }

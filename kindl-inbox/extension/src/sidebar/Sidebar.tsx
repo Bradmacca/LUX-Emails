@@ -171,18 +171,42 @@ function ErrorView({ message, onReanalyse }: { message: string; onReanalyse: () 
 
 // ── Collapsed tab (minimized) ─────────────────────────────────────────────────
 
-function CollapsedTab({ onExpand, hasResult }: { onExpand: () => void; hasResult: boolean }) {
+function CollapsedTab({
+  onExpand,
+  hasResult,
+  idle,
+}: {
+  onExpand: () => void
+  hasResult: boolean
+  idle?: boolean
+}) {
   return (
     <button
       type="button"
       className="kindl-tab"
       onClick={onExpand}
-      title="Open Kindl Inbox"
+      title={idle ? 'Open an email to analyse with Kindl' : 'Open Kindl Inbox'}
       aria-label="Open Kindl Inbox"
     >
       <div className="kindl-tab-mark">K</div>
       {hasResult && <span className="kindl-tab-dot" aria-hidden="true" />}
     </button>
+  )
+}
+
+// ── Idle state ────────────────────────────────────────────────────────────────
+
+function IdleView() {
+  return (
+    <div className="kindl-body">
+      <div className="kindl-centred">
+        <div className="kindl-centred-mark">K</div>
+        <div className="kindl-centred-title">Open an email to analyse it</div>
+        <div className="kindl-centred-desc">
+          Click any email in your inbox and Kindl will analyse it automatically.
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -195,11 +219,15 @@ export default function Sidebar({
   onMinimize,
   onExpand,
 }: SidebarProps) {
-  if (panelMode === 'hidden' || state.status === 'idle') return null
+  if (panelMode === 'hidden') return null
 
   if (panelMode === 'collapsed') {
     return (
-      <CollapsedTab onExpand={onExpand} hasResult={state.status === 'result'} />
+      <CollapsedTab
+        onExpand={onExpand}
+        hasResult={state.status === 'result'}
+        idle={state.status === 'idle'}
+      />
     )
   }
 
@@ -221,6 +249,7 @@ export default function Sidebar({
         </button>
       </div>
 
+      {state.status === 'idle'          && <IdleView />}
       {state.status === 'loading'      && <SkeletonLoading />}
       {state.status === 'result'       && <ResultView data={state.data} onReanalyse={onReanalyse} />}
       {state.status === 'auth_required'&& <AuthRequired />}

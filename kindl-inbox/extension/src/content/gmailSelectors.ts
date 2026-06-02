@@ -9,13 +9,15 @@ export const SELECTORS = {
   messageContainer: '[data-message-id]',
   messageContainerAlt: '.gs',
 
-  // Message body (primary, then fallback)
+  // Message body (primary, then fallbacks — Gmail changes class names periodically)
   messageBody: '.a3s.aiL',
   messageBodyAlt: '.ii.gt',
+  messageBodyAlt2: '.a3s',
 
   // Subject line (primary, then fallback)
   subject: 'h2.hP',
   subjectAlt: '.ha h2',
+  subjectAlt2: '[data-thread-perm-id] h2',
 
   // Sender name/email on a message header
   senderName: '.gD',
@@ -23,6 +25,9 @@ export const SELECTORS = {
 
   // Quoted reply section to strip before extracting body text
   quotedReply: '.gmail_quote',
+
+  // Gmail main reading pane (messages live here, not inside data-thread-perm-id)
+  mainPane: 'div[role="main"]',
 
   // Thread view container — presence confirms we're in an open thread
   threadView: '.adn.ads',

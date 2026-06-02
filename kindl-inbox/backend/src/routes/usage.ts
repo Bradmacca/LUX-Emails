@@ -1,8 +1,7 @@
 import { Hono } from 'hono'
+import { FREE_DAILY_LIMIT } from 'shared'
 import { verifyAuth } from '../lib/auth'
 import { getTodayUsage } from '../lib/usage'
-
-const FREE_LIMIT = 10
 
 const app = new Hono()
 
@@ -18,7 +17,7 @@ app.get('/', async (c) => {
 
   return c.json({
     count,
-    limit: auth.tier === 'pro' ? null : FREE_LIMIT,
+    limit: auth.tier === 'pro' ? null : FREE_DAILY_LIMIT,
     tier: auth.tier,
   })
 })

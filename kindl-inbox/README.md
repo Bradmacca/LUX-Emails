@@ -10,7 +10,7 @@ When you open an email in Gmail, a 340px sidebar panel slides in on the right wi
 - **Three reply drafts** — Short & direct / Professional / Detailed, each with a one-click Copy button
 - **Save to UseKindl** — placeholder for Phase 2
 
-Free tier: 10 analyses per day (claude-haiku). Pro tier ($9/mo): unlimited (claude-sonnet).
+Free tier: 3 analyses per day (claude-haiku). Pro tier ($9/mo): unlimited (claude-sonnet).
 
 ## Tech stack
 

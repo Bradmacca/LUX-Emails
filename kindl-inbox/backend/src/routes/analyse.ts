@@ -1,9 +1,8 @@
 import { Hono } from 'hono'
+import { FREE_DAILY_LIMIT } from 'shared'
 import { verifyAuth } from '../lib/auth'
 import { analyseEmail } from '../lib/claude'
 import { getTodayUsage, incrementUsage } from '../lib/usage'
-
-const FREE_LIMIT = 10
 
 const app = new Hono()
 
@@ -18,8 +17,8 @@ app.post('/', async (c) => {
   // Enforce free-tier rate limit before hitting Claude
   if (auth.tier === 'free') {
     const count = await getTodayUsage(auth.userId)
-    if (count >= FREE_LIMIT) {
-      return c.json({ error: 'RATE_LIMIT', count, limit: FREE_LIMIT }, 429)
+    if (count >= FREE_DAILY_LIMIT) {
+      return c.json({ error: 'RATE_LIMIT', count, limit: FREE_DAILY_LIMIT }, 429)
     }
   }
 
@@ -49,7 +48,11 @@ app.post('/', async (c) => {
     )
 
     // Increment usage only after a successful Claude response
-    await incrementUsage(auth.userId)
+    try {
+      await incrementUsage(auth.userId, auth.email)
+    } catch (err) {
+      console.error('[analyse] usage increment failed:', err)
+    }
 
     return c.json(result)
   } catch (err) {

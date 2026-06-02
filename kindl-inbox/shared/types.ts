@@ -1,3 +1,6 @@
+/** Free-tier daily analysis cap */
+export const FREE_DAILY_LIMIT = 3
+
 export type EmailTone = 'friendly' | 'formal' | 'urgent' | 'aggressive' | 'neutral'
 export type Urgency = 'low' | 'medium' | 'high'
 export type UserTier = 'free' | 'pro'

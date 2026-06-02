@@ -18,11 +18,25 @@ export async function verifyAuth(authHeader: string | null | undefined): Promise
   const { data: { user }, error } = await supabase.auth.getUser(token)
   if (error || !user) throw new Error('Invalid or expired token')
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from('profiles')
     .select('tier')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
+
+  if (!profile) {
+    const { data: created, error: createError } = await supabase
+      .from('profiles')
+      .upsert({ id: user.id, email: user.email ?? '', tier: 'free' }, { onConflict: 'id' })
+      .select('tier')
+      .single()
+
+    if (createError) {
+      console.error('[auth] failed to create profile:', createError.message)
+    } else {
+      profile = created
+    }
+  }
 
   return {
     userId: user.id,

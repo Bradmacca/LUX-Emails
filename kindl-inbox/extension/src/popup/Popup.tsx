@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import SignIn from './SignIn'
 import type { UsageResponse } from 'shared'
+import { FREE_DAILY_LIMIT } from 'shared'
 
 interface Session {
   email: string
@@ -15,20 +16,36 @@ export default function Popup() {
 
   // Read persisted session from chrome.storage.local on mount
   useEffect(() => {
-    chrome.storage.local.get(SESSION_KEY, (result) => {
+    chrome.storage.local.get([SESSION_KEY, 'kindl_usage'], (result) => {
       const stored = result[SESSION_KEY]
       if (stored?.access_token && stored?.email) {
         setSession({ email: stored.email, accessToken: stored.access_token })
+        if (result.kindl_usage) setUsage(result.kindl_usage as UsageResponse)
         fetchUsage()
       } else {
         setSession(null)
       }
     })
+
+    const onStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string
+    ) => {
+      if (area !== 'local') return
+      if (changes.kindl_usage?.newValue) {
+        setUsage(changes.kindl_usage.newValue as UsageResponse)
+      }
+    }
+    chrome.storage.onChanged.addListener(onStorageChange)
+    return () => chrome.storage.onChanged.removeListener(onStorageChange)
   }, [])
 
   function fetchUsage() {
     chrome.runtime.sendMessage({ type: 'GET_USAGE' }, (res) => {
-      if (res?.type === 'USAGE_RESULT') setUsage(res.data)
+      if (res?.type === 'USAGE_RESULT') {
+        setUsage(res.data)
+        chrome.storage.local.set({ kindl_usage: res.data })
+      }
     })
   }
 
@@ -58,7 +75,7 @@ export default function Popup() {
 
   const isPro = usage?.tier === 'pro'
   const usageCount = usage?.count ?? 0
-  const usageLimit = usage?.limit ?? 10
+  const usageLimit = usage?.limit ?? FREE_DAILY_LIMIT
   const usagePct = isPro ? 0 : Math.min((usageCount / usageLimit) * 100, 100)
 
   return (
