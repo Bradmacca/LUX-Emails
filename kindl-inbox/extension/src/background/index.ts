@@ -1,6 +1,7 @@
 import { getSupabaseClient } from '../lib/supabase'
 import type { ExtMessage, ExtResponse } from '../lib/messaging'
 import { FREE_DAILY_LIMIT } from 'shared'
+import { apiFetch } from './apiFetch'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string
 const SESSION_KEY = 'kindl_session'
@@ -40,7 +41,7 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       const { emailText, emailSubject, senderName } = message.payload
       let res: Response
       try {
-        res = await fetch(`${API_BASE}/api/analyse`, {
+        res = await apiFetch(`${API_BASE}/api/analyse`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${session.access_token}`,
@@ -69,7 +70,7 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
 
       // Refresh cached usage so the popup shows an up-to-date count
       try {
-        const usageRes = await fetch(`${API_BASE}/api/usage`, {
+        const usageRes = await apiFetch(`${API_BASE}/api/usage`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
         if (usageRes.ok) {
@@ -89,15 +90,32 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       if (!session) return { type: 'AUTH_REQUIRED' }
 
       try {
-        const res = await fetch(`${API_BASE}/api/usage`, {
+        const res = await apiFetch(`${API_BASE}/api/usage`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
-        if (!res.ok) return { type: 'AUTH_REQUIRED' }
+        if (res.status === 401) {
+          await clearSession()
+          return { type: 'AUTH_REQUIRED' }
+        }
+        if (!res.ok) {
+          return {
+            type: 'USAGE_ERROR',
+            error: res.status === 502 || res.status === 503
+              ? 'API is temporarily unavailable — retry in a moment.'
+              : `Could not load usage (${res.status}).`,
+          }
+        }
         const data = await res.json()
         await chrome.storage.local.set({ kindl_usage: data })
         return { type: 'USAGE_RESULT', data }
-      } catch {
-        return { type: 'AUTH_REQUIRED' }
+      } catch (err) {
+        const timedOut = err instanceof Error && err.name === 'AbortError'
+        return {
+          type: 'USAGE_ERROR',
+          error: timedOut
+            ? 'API timed out — the server may be starting up. Try again.'
+            : 'Network error — could not reach the API.',
+        }
       }
     }
 

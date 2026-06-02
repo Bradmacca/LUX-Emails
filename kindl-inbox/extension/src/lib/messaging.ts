@@ -22,6 +22,7 @@ export type ExtResponse =
   | { type: 'AUTH_REQUIRED' }
   | { type: 'RATE_LIMITED'; count: number; limit: number }
   | { type: 'USAGE_RESULT'; data: UsageResponse }
+  | { type: 'USAGE_ERROR'; error: string }
   | { type: 'OTP_SENT' }
   | { type: 'SIGN_IN_SUCCESS'; email: string; accessToken: string }
   | { type: 'SIGN_IN_ERROR'; error: string }

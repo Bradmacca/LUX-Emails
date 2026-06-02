@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { FREE_DAILY_LIMIT } from 'shared'
+import { FREE_DAILY_LIMIT } from '../../../shared/types.ts'
 import { verifyAuth } from '../lib/auth'
 import { getTodayUsage } from '../lib/usage'
 

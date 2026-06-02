@@ -13,6 +13,8 @@ const SESSION_KEY = 'kindl_session'
 export default function Popup() {
   const [session, setSession] = useState<Session | null | 'loading'>('loading')
   const [usage, setUsage] = useState<UsageResponse | null>(null)
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [usageError, setUsageError] = useState<string | null>(null)
 
   // Read persisted session from chrome.storage.local on mount
   useEffect(() => {
@@ -41,10 +43,26 @@ export default function Popup() {
   }, [])
 
   function fetchUsage() {
+    setUsageLoading(true)
+    setUsageError(null)
     chrome.runtime.sendMessage({ type: 'GET_USAGE' }, (res) => {
+      setUsageLoading(false)
+      if (chrome.runtime.lastError) {
+        setUsageError('Extension error — try reloading the extension.')
+        return
+      }
       if (res?.type === 'USAGE_RESULT') {
         setUsage(res.data)
         chrome.storage.local.set({ kindl_usage: res.data })
+        return
+      }
+      if (res?.type === 'AUTH_REQUIRED') {
+        setSession(null)
+        setUsage(null)
+        return
+      }
+      if (res?.type === 'USAGE_ERROR') {
+        setUsageError(res.error)
       }
     })
   }
@@ -99,7 +117,9 @@ export default function Popup() {
         {/* Usage card */}
         <div style={s.usageCard}>
           <div style={s.usageLabel}>Today's usage</div>
-          {usage ? (
+          {usageLoading && !usage ? (
+            <div style={s.usageCount}>Loading…</div>
+          ) : usage ? (
             <>
               <div style={s.usageCount}>
                 {isPro ? 'Unlimited analyses' : `${usageCount} / ${usageLimit} analyses`}
@@ -109,6 +129,13 @@ export default function Popup() {
                   <div style={{ ...s.barFill, width: `${usagePct}%` }} />
                 </div>
               )}
+            </>
+          ) : usageError ? (
+            <>
+              <div style={s.usageError}>{usageError}</div>
+              <button type="button" style={s.retryBtn} onClick={fetchUsage}>
+                Retry
+              </button>
             </>
           ) : (
             <div style={s.usageCount}>Loading…</div>
@@ -184,6 +211,12 @@ const s: Record<string, React.CSSProperties> = {
     letterSpacing: '0.5px', color: '#80868b', marginBottom: 4,
   },
   usageCount: { fontSize: 13, color: '#202124', fontWeight: 500, marginBottom: 6 },
+  usageError: { fontSize: 12, color: '#c5221f', lineHeight: 1.4, marginBottom: 8 },
+  retryBtn: {
+    background: 'transparent', color: '#6366f1', border: '1px solid #c7d2fe',
+    borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600,
+    cursor: 'pointer', fontFamily: 'inherit',
+  },
   barTrack: { height: 4, background: '#e8eaed', borderRadius: 2, overflow: 'hidden' },
   barFill: { height: '100%', background: '#6366f1', borderRadius: 2, transition: 'width 0.3s' },
   upgradeBtn: {
