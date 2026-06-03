@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
-import type { AnalyseResponse, UserTier } from '../../../shared/types.ts'
+import type { AnalyseResponse, UserTier } from '../types.js'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

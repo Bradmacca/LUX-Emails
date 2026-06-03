@@ -1,9 +1,3 @@
-# Railway deploy config (service root: kindl-inbox/backend)
-# Install from monorepo root so the `shared` workspace package resolves.
-
-[build]
-buildCommand = "npm install --prefix .. && npm install"
-
 [deploy]
 startCommand = "npm run start"
 restartPolicyType = "ON_FAILURE"

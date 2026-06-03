@@ -1,5 +1,5 @@
 import { createServiceClient } from './supabase'
-import type { UserTier } from '../../../shared/types.ts'
+import type { UserTier } from '../types.js'
 
 export interface AuthResult {
   userId: string
