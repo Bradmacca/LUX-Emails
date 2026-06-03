@@ -2,7 +2,7 @@
 # Install from monorepo root so the `shared` workspace package resolves.
 
 [build]
-buildCommand = "npm install --prefix .. && npm install"
+buildCommand = "npm install --prefix .."
 
 [deploy]
 startCommand = "npm run start"
