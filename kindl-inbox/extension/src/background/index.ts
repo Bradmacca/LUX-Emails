@@ -119,50 +119,11 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       }
     }
 
-    // ── Google OAuth (PKCE via chrome.identity) ───────────────────────────────
+    // ── Google OAuth — handled in popup (see signInWithGoogleChrome) ─────────
     case 'SIGN_IN_GOOGLE': {
-      try {
-        const supabase = getSupabaseClient()
-        const redirectUrl = chrome.identity.getRedirectURL()
-
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
-        })
-        if (error || !data.url) throw new Error(error?.message ?? 'Could not start Google sign-in')
-
-        const responseUrl = await new Promise<string>((resolve, reject) => {
-          chrome.identity.launchWebAuthFlow(
-            { url: data.url, interactive: true },
-            (url) => {
-              if (chrome.runtime.lastError || !url) {
-                reject(new Error(chrome.runtime.lastError?.message ?? 'Sign-in was cancelled'))
-              } else {
-                resolve(url)
-              }
-            }
-          )
-        })
-
-        const code = new URL(responseUrl).searchParams.get('code')
-        if (!code) throw new Error('No authorisation code returned from Google')
-
-        const { data: sessionData, error: sessionError } =
-          await supabase.auth.exchangeCodeForSession(code)
-        if (sessionError || !sessionData.session) {
-          throw new Error(sessionError?.message ?? 'Failed to create session')
-        }
-
-        const userEmail = sessionData.session.user.email ?? ''
-        await saveSession({
-          access_token: sessionData.session.access_token,
-          refresh_token: sessionData.session.refresh_token,
-          email: userEmail,
-        })
-
-        return { type: 'SIGN_IN_SUCCESS', email: userEmail, accessToken: sessionData.session.access_token }
-      } catch (err) {
-        return { type: 'SIGN_IN_ERROR', error: err instanceof Error ? err.message : 'Sign-in failed' }
+      return {
+        type: 'SIGN_IN_ERROR',
+        error: 'Use the extension popup to sign in with Google.',
       }
     }
 

@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
 import type { ExtResponse } from '../lib/messaging'
+import { signInWithGoogleChrome } from '../lib/supabase'
+
+const SESSION_KEY = 'kindl_session'
 
 interface SignInProps {
   onSignedIn: (email: string, accessToken: string) => void
@@ -13,20 +16,28 @@ export default function SignIn({ onSignedIn }: SignInProps) {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setView('loading')
     setError(null)
-    chrome.runtime.sendMessage(
-      { type: 'SIGN_IN_GOOGLE' },
-      (response: ExtResponse) => {
-        if (response.type === 'SIGN_IN_SUCCESS') {
-          onSignedIn(response.email, response.accessToken)
-        } else if (response.type === 'SIGN_IN_ERROR') {
-          setError(response.error)
-          setView('options')
-        }
-      }
-    )
+    try {
+      const { email, accessToken, refreshToken } = await signInWithGoogleChrome()
+      await new Promise<void>((resolve) => {
+        chrome.storage.local.set(
+          {
+            [SESSION_KEY]: {
+              access_token: accessToken,
+              refresh_token: refreshToken,
+              email,
+            },
+          },
+          resolve
+        )
+      })
+      onSignedIn(email, accessToken)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign-in failed')
+      setView('options')
+    }
   }
 
   const handleSendCode = () => {
