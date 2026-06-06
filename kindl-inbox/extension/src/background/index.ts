@@ -28,6 +28,31 @@ function clearSession(): Promise<void> {
   )
 }
 
+/** Try to get a fresh access token using the stored refresh token.
+ *  Returns the new access token on success, null on failure. */
+async function refreshAccessToken(): Promise<string | null> {
+  const session = await getSession()
+  if (!session?.refresh_token) return null
+
+  try {
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: session.refresh_token,
+    })
+    if (error || !data.session) return null
+
+    const updated: StoredSession = {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      email: data.session.user.email ?? session.email,
+    }
+    await saveSession(updated)
+    return updated.access_token
+  } catch {
+    return null
+  }
+}
+
 // ── Message handler ───────────────────────────────────────────────────────────
 
 async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
@@ -54,8 +79,29 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       }
 
       if (res.status === 401) {
-        await clearSession()
-        return { type: 'AUTH_REQUIRED' }
+        // Token expired — try a silent refresh before giving up
+        const newToken = await refreshAccessToken()
+        if (newToken) {
+          try {
+            res = await apiFetch(`${API_BASE}/api/analyse`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${newToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ emailText, emailSubject, senderName }),
+            })
+          } catch {
+            return { type: 'ANALYSE_ERROR', error: 'Network error — check your connection.' }
+          }
+          if (res.status === 401) {
+            await clearSession()
+            return { type: 'AUTH_REQUIRED' }
+          }
+        } else {
+          await clearSession()
+          return { type: 'AUTH_REQUIRED' }
+        }
       }
       if (res.status === 429) {
         const body = await res.json().catch(() => ({}))
@@ -94,6 +140,18 @@ async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
         if (res.status === 401) {
+          // Try silent token refresh
+          const newToken = await refreshAccessToken()
+          if (newToken) {
+            const retried = await apiFetch(`${API_BASE}/api/usage`, {
+              headers: { Authorization: `Bearer ${newToken}` },
+            }).catch(() => null)
+            if (retried?.ok) {
+              const data = await retried.json()
+              await chrome.storage.local.set({ kindl_usage: data })
+              return { type: 'USAGE_RESULT', data }
+            }
+          }
           await clearSession()
           return { type: 'AUTH_REQUIRED' }
         }
